@@ -172,6 +172,7 @@ class ReplacementCycling(Commander):
         self.generate(self.defender, 1)
         self.sync_all()
         self.validate_mined(tx, log_transaction_name="Attacker tx UTXOs")
+        self.attacker_wallet.rescan_utxos()
         return tx
 
     def build_defender_transaction(self, multsig: CTransaction, fee: int = 200) -> CTransaction:
