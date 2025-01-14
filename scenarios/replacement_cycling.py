@@ -519,6 +519,7 @@ class ReplacementCycling(Commander):
         # the defender transaction.
         #
         self.log.info("Starting replacement cycling")
+        self.wait_for_tanks_connected()
         self.defender = self.nodes[0]
         self.attacker = self.nodes[1]
         self.defender_wallet = MiniWallet(self.defender)
