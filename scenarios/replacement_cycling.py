@@ -501,11 +501,14 @@ class ReplacementCycling(Commander):
         assert mempool_accept_result[0]["allowed"]
 
     @staticmethod
-    def miner_task(node, self):
+    def miner_task(node, stop_msg, self):
         counter = 0
         while True:
             if counter >= 10:
                 self.log.info("@MINER reached 10 blocks, exiting")
+                break
+            if stop_msg.is_set():
+                self.log.info("@MINER got stop message")
                 break
             # Poisson
             # 600 seconds | t: time | p: probability of event
@@ -576,14 +579,19 @@ class ReplacementCycling(Commander):
         self.setup_attacker_junk_transaction()
         self.log.info(f"Balance attacker {self.attacker_wallet.get_balance()}")
         self.log.info(f"Balance defender {self.defender_wallet.get_balance()}")
+
+        stop_msg = threading.Event()
         miner_thread = threading.Thread(
-            target=self.miner_task, args=(self.defender, self)
+            target=self.miner_task, args=(self.defender, stop_msg, self)
         )
         miner_thread.start()
         self.log.info("Miner started")
 
         self.test_attacker_replaces_and_can_be_mined(additional_attacker_utxos)
         self.test_cycling_out_defender_tx(additional_attacker_utxos)
+
+        stop_msg.set()
+        miner_thread.join()
 
 
 def main():
