@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
+import math
 from decimal import Decimal
-from random import randint
+import random
 import threading
 from time import sleep
 
@@ -32,6 +33,18 @@ from test_framework.wallet import MiniWallet
 class ReplacementCycling(Commander):
     def set_test_params(self):
         self.num_nodes = 2
+
+    def add_options(self, parser):
+        ten_minutes_in_seconds = 600
+        parser.description = "Generate blocks over time"
+        parser.usage = f"warnet run /path/to/{__name__}.py [options]"
+        parser.add_argument(
+            "--interval",
+            dest="interval",
+            default=ten_minutes_in_seconds,
+            type=int,
+            help=f"Generate a block on average every n seconds [Default: {ten_minutes_in_seconds}]",
+        )
 
     def get_witness_script(self):
         defender_pubkey = self.defender_seckey.get_pubkey()
@@ -449,11 +462,17 @@ class ReplacementCycling(Commander):
             if counter >= 10:
                 self.log.info("@MINER reached 10 blocks, exiting")
                 break
-            self.generate(node, 1)
-            time_sleep = randint(10, 60)
-            self.log.info(f"@MINER Mined block {node.getblockcount()}")
-            self.log.info(f"@MINER sleeping for {time_sleep} seconds")
+            # Poisson
+            # 600 seconds | t: time | p: probability of event
+            # p = 1 - e^(-1/600 * t)
+            # t = -ln(1 - p) / (1/600)
+            time_sleep = int(
+                -math.log(1 - random.random()) / (1 / self.options.interval)
+            )
+            self.log.info(f"@MINER Next block in {time_sleep} seconds")
             sleep(time_sleep)
+            self.generate(node, 1)
+            self.log.info(f"@MINER Mined block {node.getblockcount()}")
 
     @staticmethod
     def defender_task(defender_node, self):
